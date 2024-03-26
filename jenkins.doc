@@ -1,0 +1,191 @@
+Introduction
+Jenkins is an open source automation server intended to automate repetitive technical tasks involved in the continuous integration and delivery of software. Jenkins is Java-based and can be installed from Ubuntu packages or by downloading and running its Web application ARchive (WAR) file — a collection of files that make up a complete web application which is intended to be run on a server.
+In this tutorial we will install Jenkins by adding its Debian package repository, then using that repository to install the package using apt-get.
+Prerequisites
+To follow this tutorial, you will need:
+One Ubuntu 16.04 server configured with a non-root sudo user and a firewall by following the Ubuntu 16.04 initial server setup guide. We recommend starting with at least 1 GB of RAM. See Choosing the Right Hardware for Masters for guidance in planning the capacity of a production Jenkins installation.
+When the server is set up, you're ready to follow along.
+Step 1 — Installing Jenkins
+The version of Jenkins included with the default Ubuntu packages is often behind the latest available version from the project itself. In order to take advantage of the latest fixes and features, we'll use the project-maintained packages to install Jenkins.
+First, we'll add the repository key to the system.
+•	wget -q -O - https://pkg.jenkins.io/debian/jenkins-ci.org.key | sudo apt-key add -
+When the key is added, the system will return OK. Next, we'll append the Debian package repository address to the server's sources.list:
+•	echo deb https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list
+
+When both of these are in place, we'll run update so that apt-get will use the new repository:
+•	sudo apt-get update
+
+Finally, we'll install Jenkins and its dependencies, including Java:
+•	sudo apt-get install jenkins
+
+Now that Jenkins and its dependencies are in place, we'll start the Jenkins server.
+Step 2 — Starting Jenkins
+Using systemctl we'll start Jenkins:
+sudo systemctl start jenkins
+Since systemctl doesn't display output, we'll use its status command to verify that it started successfully:
+•	sudo systemctl status jenkins
+
+If everything went well, the beginning of the output should show that the service is active and configured to start at boot:
+Output
+● jenkins.service - LSB: Start Jenkins at boot time
+  Loaded: loaded (/etc/init.d/jenkins; bad; vendor preset: enabled)
+  Active:active (exited) since Thu 2017-04-20 16:51:13 UTC; 2min 7s ago
+    Docs: man:systemd-sysv-generator(8)
+Now that Jenkins is running, we'll adjust our firewall rules so that we can reach Jenkins from a web browser to complete the initial set up.
+Step 3 — Opening the Firewall
+By default, Jenkins runs on port 8080, so we'll open that port using ufw:
+•	sudo ufw allow 8080
+
+We can see the new rules by checking UFW's status.
+•	sudo ufw status
+
+We should see that traffic is allowed to port 8080 from anywhere:
+Output
+Status: active
+
+To                         Action      From
+--                         ------      ----
+OpenSSH                    ALLOW       Anywhere
+8080                       ALLOW       Anywhere
+OpenSSH (v6)               ALLOW       Anywhere (v6)
+8080 (v6)                  ALLOW       Anywhere (v6)
+Note: If the firewall is inactive, the following commands will make sure that OpenSSH is allowed and then enable it.
+•	sudo ufw allow OpenSSH
+
+•	sudo ufw enable
+
+Now that Jenkins is installed and the firewall allows us to access it, we can complete the initial setup.
+Step 4 — Setting up Jenkins
+To set up our installation, we'll visit Jenkins on its default port, 8080, using the server domain name or IP address: http://ip_address_or_domain_name:8080
+We should see "Unlock Jenkins" screen, which displays the location of the initial password
+ 
+In the terminal window, we'll use the cat command to display the password:
+•	sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+We'll copy the 32-character alphanumeric password from the terminal and paste it into the "Administrator password" field, then click "Continue". The next screen presents the option of installing suggested plugins or selecting specific plugins.
+ 
+We'll click the "Install suggested plugins" option, which will immediately begin the installation process:
+ 
+When the installation is complete, we'll be prompted to set up the first administrative user. It's possible to skip this step and continue as admin using the initial password we used above, but we'll take a moment to create the user.
+Note: The default Jenkins server is NOT encrypted, so the data submitted with this form is not protected. When you're ready to use this installation, follow the guide How to Configure Jenkins with SSL using an Nginx Reverse Proxy. This will protect user credentials and information about builds that are transmitted via the Web interface.
+ 
+Once the first admin user is in place, you should see a "Jenkins is ready!" confirmation screen.
+ 
+Click "Start using Jenkins" to visit the main Jenkins dashboard:
+ 
+At this point, Jenkins has been successfully installed.
+
+
+Running Node Service in Jenkins
+
+Configuring Jenkins with the Necessary Plugins
+You should have already downloaded Jenkins by now.  If you haven’t go ahead and obtain the WAR file from the Jenkins website.
+To start Jenkins, execute the following command from your Command Prompt or Terminal:
+java -jar jenkins.war -httpPort=8080
+1	java -jar jenkins.war -httpPort=8080
+This will make Jenkins accessible from a web browser at http://localhost:8080.  Upon first launch, you’ll be placed in a configuration wizard.
+ 
+The first screen in this configuration wizard will ask you for the password that Jenkins generates.  Find it in the location presented on the screen.
+The second screen will ask you which plugins you’d like to install.
+ 
+For now, we’re going to install the suggested plugins.  We’ll be installing extra plugins later.
+The third screen will ask us to create our first administrative user.  Technically, the generated password you’re using is an administrative user, but you may want to create a new one.
+ 
+After you create a user, Jenkins is ready to go.  However, we are going to need another plugin and it can vary depending on how we wish to build and deploy the Node.js application.
+From the main Jenkins screen, choose to Manage Jenkins to see a list of administration options.
+ 
+What we care about is managing the available plugins.  After choosing Manage Plugins we want to search for and install a plugin by the name of Post-Build Script.
+ 
+This plugin allows us to execute shell commands or scripts after the build stage has completed.  In this example we’ll be building and deploying to the same host, we can run everything locally via shell commands.  In a production environment you might want to use the SSH plugin to migrate the code to a remote server and run it there.
+With the plugins available, let’s create our continuous deployment workflow for Node.js in Jenkins.
+Creating a Jenkins Continuous Deployment Workflow for Node.js
+Just to reiterate, our goal here is to create a workflow that will pull a project from GitHub, build it by installing all the dependencies, and deploy it by running it on a server, in this case our local machine.
+Start by creating a new item, otherwise known as a new job or workflow.
+ 
+We’re going to be creating a Freestyle Project, but you can give it any name you want.  There are three things that need to be done on the next screen.
+The source of our workspace will come from GitHub.  In your own project it can come from elsewhere, but for this one we need to define our source control information.
+ 
+The GitHub project is one that I had previously created and written about, like mentioned before.  The project can be found at:
+
+https://github.com/andalike/helloNode
+
+Now in a production environment you’ll probably want to set up GitHub hooks to trigger the job process, but since this is all on localhost, GitHub won’t allow it.  Instead we’ll be triggering the job manually.
+ 
+ 
+In this example we will be deploying the application locally on our machine.  
+
+
+
+Jenkins With Docker
+
+On macOS and Linux
+1.	Open up a terminal window.
+2.	Run the jenkinsci/blueocean image as a container in Docker using the following docker run command (bearing in mind that this command automatically downloads the image if this hasn’t been done):
+3.	docker pull jenkinsci/blueocean
+4.	
+	Maps the /var/jenkins_home directory in the container to the Docker volume with the name jenkins-data. If this volume does not exist, then this docker run command will automatically create the volume for you.
+	Maps the $HOME directory on the host (i.e. your local) machine (usually the /Users/<your-username> directory) to the /home directory in the container.
+Note: If copying and pasting the command snippet above doesn’t work, try copying and pasting this annotation-free version here:
+docker run \
+  --rm \
+  -u root \
+  -p 8080:8080 \
+  -v jenkins-data:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$HOME":/home \
+  jenkinsci/blueocean
+5.	Proceed to the Setup wizard.
+On Windows
+1.	Open up a command prompt window.
+2.	Run the jenkinsci/blueocean image as a container in Docker using the following docker run command (bearing in mind that this command automatically downloads the image if this hasn’t been done):
+3.	docker run ^
+4.	  --rm ^
+5.	  -u root ^
+6.	  -p 8080:8080 ^
+7.	  -v jenkins-data:/var/jenkins_home ^
+8.	  -v /var/run/docker.sock:/var/run/docker.sock ^
+9.	  -v "%HOMEPATH%":/home ^
+  jenkinsci/blueocean
+For an explanation of these options, refer to the macOS and Linux instructions above.
+10.	Proceed to the Setup wizard
+Accessing the Jenkins/Blue Ocean Docker container
+If you have some experience with Docker and you wish or need to access the Jenkins/Blue Ocean Docker container through a terminal/command prompt using the docker exec command, you can add an option like --name jenkins-tutorials (with the docker run above), which would give the Jenkins/Blue Ocean Docker container the name "jenkins-tutorials".
+This means you could access the Jenkins/Blue Ocean container (through a separate terminal/command prompt window) with a docker exec command like:
+docker exec -it jenkins-tutorials bash
+Setup wizard
+Before you can access Jenkins, there are a few quick "one-off" steps you’ll need to perform.
+Unlocking Jenkins
+When you first access a new Jenkins instance, you are asked to unlock it using an automatically-generated password.
+1.	After the 2 sets of asterisks appear in the terminal/command prompt window, browse to http://localhost:8080 and wait until the Unlock Jenkins page appears.
+ 
+2.	From your terminal/command prompt window again, copy the automatically-generated alphanumeric password (between the 2 sets of asterisks).
+
+ 
+3.	On the Unlock Jenkins page, paste this password into the Administrator password field and click Continue.
+Doesent Works?
+•	Get Container Id by: sudo docker container ls
+•	Run this command: sudo docker exec 89754a30beb9  cat /var/jenkins_home/secrets/initialAdminPassword
+
+
+Customizing Jenkins with plugins
+After unlocking Jenkins  the Customize Jenkins page appears.
+
+On this page, click Install suggested plugins.
+The setup wizard shows the progression of Jenkins being configured and the suggested plugins being installed. This process may take a few minutes.
+Creating the first administrator user
+Finally, Jenkins asks you to create your first administrator user.
+1.	When the Create First Admin User page appears, specify your details in the respective fields and click Save and Finish.
+2.	When the Jenkins is ready page appears, click Start using Jenkins.
+Notes:
+o	This page may indicate Jenkins is almost ready! instead and if so, click Restart.
+o	If the page doesn’t automatically refresh after a minute, use your web browser to refresh the page manually.
+3.	If required, log in to Jenkins with the credentials of the user you just created and you’re ready to start using Jenkins!
+Stopping and restarting Jenkins
+Throughout the remainder of this tutorial, you can stop the Jenkins/Blue Ocean Docker container by typing Ctrl-C in the terminal/command prompt window from which you ran the docker run … command 
+To restart the Jenkins/Blue Ocean Docker container:
+1.	Run the same docker run … command you ran for Mac/Windows/Linux above.
+Note: This process also updates the jenkinsci/blueocean Docker image, if an updated one is available.
+2.	Browse to http://localhost:8080.
+3.	Wait until the log in page appears and log in
+
+
