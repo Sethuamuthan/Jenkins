@@ -23,3 +23,5 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins
 sudo apt-get update
 
 sudo apt install -y jenkins
+
+done
